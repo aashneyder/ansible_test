@@ -1,0 +1,48 @@
+---
+- name: Deploy Nessus Integration
+  hosts: test_hosts
+  become: yes
+  become_user: root
+  tasks:
+    - name: Stop Docker Compose
+      shell: docker-compose stop
+      args:
+        chdir: /root/ansible_folder
+      ignore_errors: no
+
+    - name: Remove old container
+      shell: docker rm -rf ansible-test
+      ignore_errors: no
+
+    - name: Remove old image
+      shell: docker rmi ans_img:latest
+      ignore_errors: no
+
+    - name: Remove old folder
+      shell: rm -rf /root/ansible_folder
+      ignore_errors: no
+    
+    - name: Remove old tars from /root/archives
+      shell: rm /root/archives/ans_img.tar /root/ansible_folder.tar.gz
+
+    - name: Download ansible_folder.tar.gz
+      shell: wget -O /root/archives/ansible_folder.tar.gz 'https://github.com/aashneyder/ansible_test/raw/main/ansible_folder.tar.gz'
+      ignore_errors: no
+      
+    - name: Extract foo.tgz into /var/lib/foo
+      unarchive:
+      args:  
+        src: "/root/archives/ansible_folder.tar.gz"
+        dest: "/root/ansible_folder"
+
+    - name: Load Docker image
+      shell: docker load -i /root/ansible_folder/ans_img.tar.gz
+
+    - name: Start Docker Compose
+      shell: docker-compose up -d
+      args:
+        chdir: /root/ansible_folder
+
+    - name: Move image to archives
+      command: mv /root/ansible_folder/ans_img.tar /root/archives/ans_img.tar
+
